@@ -137,3 +137,5 @@ test-tparse: $(TPARSE)
 tools: # @HELP Install tools.
 tools: $(TOOLS)
 
+validate-tilt: # @HELP Validate the Tiltfile and Kubernetes manifests.
+	tilt alpha tiltfile-result > /dev/null
