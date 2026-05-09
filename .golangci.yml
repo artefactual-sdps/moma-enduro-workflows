@@ -1,49 +1,76 @@
-run:
-  deadline: 60s
-
+version: "2"
 linters:
+  default: standard
   enable:
+    - bodyclose
     - contextcheck
-    - gci
-    - gofumpt
+    - copyloopvar
     - gosec
     - importas
     - intrange
     - misspell
+    - modernize
+    - revive
     - tparallel
     - unparam
-
-issues:
-  exclude-dirs:
-    - hack
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-
-linters-settings:
-  gci:
-    no-inline-comments: true
-    no-prefix-comments: false
-    sections:
-      - standard
-      - default
-      - prefix(github.com/artefactual-sdps/preprocessing-moma)
-    section-separators:
-      - newLine
-  gofumpt:
-    extra-rules: true
-  importas:
-    no-unaliased: true
-    no-extra-aliases: false
-    alias:
-      - pkg: go.temporal.io/sdk/contrib/(\w+)
-        alias: temporalsdk_contrib_$1
-      - pkg: go.temporal.io/sdk/(\w+)
-        alias: temporalsdk_$1
-      - pkg: go.temporal.io/api/(\w+)
-        alias: temporalapi_$1
-  gosec:
-    exclude-generated: false
-    severity: low
-    confidence: low
+  settings:
+    gosec:
+      severity: low
+      confidence: low
+    importas:
+      alias:
+        - pkg: go.temporal.io/sdk/contrib/(\w+)
+          alias: temporalsdk_contrib_$1
+        - pkg: go.temporal.io/sdk/(\w+)
+          alias: temporalsdk_$1
+        - pkg: go.temporal.io/api/(\w+)
+          alias: temporalapi_$1
+      no-unaliased: true
+      no-extra-aliases: false
+    revive:
+      enable-all-rules: false
+      rules:
+        - name: package-directory-mismatch
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+        path: _test\.go
+    paths:
+      - hack
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - golines
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/artefactual-sdps/moma-enduro-workflows)
+      no-inline-comments: true
+      no-prefix-comments: false
+    gofumpt:
+      extra-rules: true
+    golines:
+      max-len: 120
+      shorten-comments: true
+      reformat-tags: true
+      chain-split-dots: true
+  exclusions:
+    generated: lax
+    paths:
+      - hack
+      - third_party$
+      - builtin$
+      - examples$

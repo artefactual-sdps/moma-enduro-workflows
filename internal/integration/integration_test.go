@@ -10,22 +10,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/artefactual-sdps/enduro/pkg/childwf"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	cp "github.com/otiai10/copy"
 	temporalsdk_client "go.temporal.io/sdk/client"
 	temporalsdk_testsuite "go.temporal.io/sdk/testsuite"
 	"gotest.tools/v3/assert"
 	tfs "gotest.tools/v3/fs"
 
-	"github.com/artefactual-sdps/preprocessing-moma/cmd/worker/workercmd"
-	"github.com/artefactual-sdps/preprocessing-moma/internal/config"
-	"github.com/artefactual-sdps/preprocessing-moma/internal/workflow"
+	"github.com/artefactual-sdps/moma-enduro-workflows/cmd/worker/workercmd"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflow"
 )
 
 const (
 	dirMode  fs.FileMode = 0o700
 	fileMode fs.FileMode = 0o600
+
+	smallFileSHA512Manifest = `8cbdd4ed5452f7c066509c066d5ea87fc03f30b0c67153624a1bce4d6e14b6709b5e78caf723cdf419d0efad4db96ba1cad3196783c26a7743029459bdd148b0  data/small.txt
+`
 )
 
 type temporalInstance struct {
@@ -100,18 +105,16 @@ func newTestEnv(t *testing.T, cfg config.Configuration) *testEnv {
 func (env *testEnv) createTestDir() {
 	env.t.Helper()
 
-	env.testDir = tfs.NewDir(env.t, "preprocessing-test")
+	env.testDir = tfs.NewDir(env.t, "moma-enduro-test")
 	env.cfg.SharedPath = env.testDir.Path()
 }
 
 func (env *testEnv) startWorker(ctx context.Context) {
 	env.t.Helper()
 
-	ctx, cancel := context.WithCancel(ctx)
 	m := workercmd.NewMain(defaultLogger(env.t), env.cfg)
 
 	env.t.Cleanup(func() {
-		cancel()
 		if err := m.Close(); err != nil {
 			env.t.Fatal(err)
 		}
@@ -138,8 +141,14 @@ func (env *testEnv) copyTestTransfer(name string) {
 		env.t.Fatalf("Error copying %s to %s", src, dest)
 	}
 
+	root, err := os.OpenRoot(dest)
+	if err != nil {
+		env.t.Fatalf("Error opening %s: %v", dest, err)
+	}
+	defer root.Close()
+
 	// Explicitly set file modes.
-	filepath.WalkDir(dest, func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(root.FS(), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -149,20 +158,22 @@ func (env *testEnv) copyTestTransfer(name string) {
 			mode = dirMode
 		}
 
-		if err := os.Chmod(path, mode); err != nil {
+		if err := root.Chmod(path, mode); err != nil {
 			return err
 		}
 
 		return nil
-	})
+	}); err != nil {
+		env.t.Fatalf("Error setting file modes in %s: %v", dest, err)
+	}
 }
 
 func TestIntegration(t *testing.T) {
 	truthy := []string{"1", "t", "true"}
-	v := strings.ToLower(os.Getenv("ENDURO_PP_INTEGRATION_TEST"))
+	v := strings.ToLower(os.Getenv("MOMA_ENDURO_INTEGRATION_TEST"))
 	if !slices.Contains(truthy, v) {
 		t.Skipf(
-			"Set ENDURO_PP_INTEGRATION_TEST={%s} to run this test.",
+			"Set MOMA_ENDURO_INTEGRATION_TEST={%s} to run this test.",
 			strings.Join(truthy, ","),
 		)
 	}
@@ -170,7 +181,7 @@ func TestIntegration(t *testing.T) {
 	ctx := context.Background()
 	temporalServer := setUpTemporal(ctx, t)
 
-	t.Run("Remove .DS_Store files", func(t *testing.T) {
+	t.Run("Remove .DS_Store files and bag SIP", func(t *testing.T) {
 		testTransfer := "small_with_ds_store"
 
 		env := newTestEnv(t, defaultConfig())
@@ -185,24 +196,49 @@ func TestIntegration(t *testing.T) {
 				WorkflowExecutionTimeout: 30 * time.Second,
 			},
 			workflow.NewPreprocessingWorkflow(env.testDir.Path()).Execute,
-			&workflow.PreprocessingWorkflowParams{
+			&childwf.PreprocessingParams{
 				RelativePath: testTransfer,
 			},
 		)
 		assert.NilError(t, err, "Workflow could not be started.")
 
-		var result workflow.PreprocessingWorkflowResult
-		run.Get(ctx, &result)
+		var result childwf.PreprocessingResult
+		err = run.Get(ctx, &result)
+		assert.NilError(t, err)
 
-		assert.Equal(t, result, workflow.PreprocessingWorkflowResult{
-			RelativePath: testTransfer,
-		})
+		assert.DeepEqual(
+			t,
+			result,
+			childwf.PreprocessingResult{
+				Outcome:      childwf.OutcomeSuccess,
+				RelativePath: testTransfer,
+				Tasks: []*childwf.Task{
+					{
+						Name:    "Remove unwanted files",
+						Message: "Unwanted files removed: 1",
+						Outcome: childwf.TaskOutcomeSuccess,
+					},
+					{
+						Name:    "Bag SIP",
+						Message: "SIP has been bagged",
+						Outcome: childwf.TaskOutcomeSuccess,
+					},
+				},
+			},
+			cmpopts.IgnoreFields(childwf.Task{}, "StartedAt", "CompletedAt"),
+		)
 		assert.Assert(t, tfs.Equal(
 			env.testDir.Path(),
 			tfs.Expected(t,
 				tfs.WithDir(testTransfer, tfs.WithMode(dirMode),
-					tfs.WithFile(
-						"small.txt", "I am a small file.\n", tfs.WithMode(fileMode),
+					tfs.WithFile("bag-info.txt", "", tfs.MatchAnyFileContent, tfs.WithMode(fileMode)),
+					tfs.WithFile("bagit.txt", "", tfs.MatchAnyFileContent, tfs.WithMode(fileMode)),
+					tfs.WithFile("manifest-sha512.txt", smallFileSHA512Manifest, tfs.WithMode(fileMode)),
+					tfs.WithFile("tagmanifest-sha512.txt", "", tfs.MatchAnyFileContent, tfs.WithMode(fileMode)),
+					tfs.WithDir("data", tfs.WithMode(dirMode),
+						tfs.WithFile(
+							"small.txt", "I am a small file.\n", tfs.WithMode(fileMode),
+						),
 					),
 				),
 			),

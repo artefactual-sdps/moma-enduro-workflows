@@ -10,13 +10,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read Go version
-        id: go_version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - name: Install Go (${{ steps.go_version.outputs.go_version }})
+      - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
+          go-version-file: go.mod
       - name: Get date
         id: get-date
         shell: bash
@@ -35,31 +32,18 @@ jobs:
         run: make lint
         env:
           GOLANGCI_LINT_CACHE: ${{ runner.temp }}/golangci-lint-cache
-  golines:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Read Go version
-        id: go_version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - name: Install Go (${{ steps.go_version.outputs.go_version }})
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
-      - name: Run golines
-        run: make golines
+      - name: Run golangci-lint fmt
+        run: make fmt
+        env:
+          GOLANGCI_LINT_CACHE: ${{ runner.temp }}/golangci-lint-cache
   shfmt:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read Go version
-        id: go_version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - name: Install Go (${{ steps.go_version.outputs.go_version }})
+      - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
+          go-version-file: go.mod
       - name: Run shfmt
         run: make shfmt

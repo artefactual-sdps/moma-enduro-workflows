@@ -3,6 +3,7 @@ package workercmd
 import (
 	"context"
 
+	"github.com/artefactual-sdps/temporal-activities/bagcreate"
 	"github.com/artefactual-sdps/temporal-activities/removefiles"
 	"github.com/go-logr/logr"
 	"go.artefactual.dev/tools/temporal"
@@ -12,11 +13,9 @@ import (
 	temporalsdk_worker "go.temporal.io/sdk/worker"
 	temporalsdk_workflow "go.temporal.io/sdk/workflow"
 
-	"github.com/artefactual-sdps/preprocessing-moma/internal/config"
-	"github.com/artefactual-sdps/preprocessing-moma/internal/workflow"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflow"
 )
-
-const Name = "preprocessing-worker"
 
 type Main struct {
 	logger         logr.Logger
@@ -57,9 +56,15 @@ func (m *Main) Run(ctx context.Context) error {
 		workflow.NewPreprocessingWorkflow(m.cfg.SharedPath).Execute,
 		temporalsdk_workflow.RegisterOptions{Name: m.cfg.Temporal.WorkflowName},
 	)
+
 	w.RegisterActivityWithOptions(
-		removefiles.NewActivity().Execute,
-		temporalsdk_activity.RegisterOptions{Name: removefiles.ActivityName},
+		removefiles.New().Execute,
+		temporalsdk_activity.RegisterOptions{Name: removefiles.Name},
+	)
+
+	w.RegisterActivityWithOptions(
+		bagcreate.New(m.cfg.Bagit).Execute,
+		temporalsdk_activity.RegisterOptions{Name: bagcreate.Name},
 	)
 
 	if err := w.Start(); err != nil {

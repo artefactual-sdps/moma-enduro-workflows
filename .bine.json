@@ -1,0 +1,46 @@
+// See https://github.com/artefactual-labs/bine for config details.
+{
+  "project": "moma-enduro-workflows",
+  "bins": [
+    {
+      "name": "golangci-lint",
+      "url": "https://github.com/golangci/golangci-lint",
+      "version": "2.11.2",
+      "asset_pattern": "{name}-{version}-{goos}-{goarch}.tar.gz"
+    },
+    {
+      "name": "go-mod-outdated",
+      "url": "https://github.com/psampaz/go-mod-outdated",
+      "version": "0.9.0",
+      "asset_pattern": "{name}_{version}_{os}_{arch}.tar.gz"
+    },
+    {
+      "name": "gosec",
+      "go_package": "github.com/securego/gosec/v2/cmd/gosec",
+      "version": "latest"
+    },
+    {
+      "name": "gotestsum",
+      "url": "https://github.com/gotestyourself/gotestsum",
+      "version": "1.13.0",
+      "asset_pattern": "{name}_{version}_{goos}_{goarch}.tar.gz"
+    },
+    {
+      "name": "govulncheck",
+      "go_package": "golang.org/x/vuln/cmd/govulncheck",
+      "version": "latest"
+    },
+    {
+      "name": "shfmt",
+      "url": "https://github.com/mvdan/sh",
+      "version": "3.13.0",
+      "asset_pattern": "{name}_v{version}_{goos}_{goarch}"
+    },
+    {
+      "name": "tparse",
+      "url": "https://github.com/mfridman/tparse",
+      "version": "0.18.0",
+      "asset_pattern": "{name}_{goos}_{arch}"
+    }
+  ]
+}

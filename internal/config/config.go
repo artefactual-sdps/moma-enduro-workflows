@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/artefactual-sdps/temporal-activities/bagcreate"
 	"github.com/spf13/viper"
 )
 
@@ -22,16 +23,14 @@ type Configuration struct {
 	// number of messages logged.
 	Verbosity int
 
-	// SharedPath is a file path that both Preprocessing and Enduro can access
-	// (required).
-	//
-	// Enduro will deposit transfers in SharedPath for preprocessing.
-	// Preprocessing must write transfer updates to SharedPath for retrieval by
-	// Enduro and preservation processing.
+	// SharedPath is a directory path that both the custom worker and the Enduro
+	// workers can access. This is required for preprocessing workers to share
+	// the SIP.
 	SharedPath string
 
 	Temporal Temporal
 	Worker   WorkerConfig
+	Bagit    bagcreate.Config
 }
 
 type Temporal struct {
@@ -53,7 +52,7 @@ type Temporal struct {
 
 type WorkerConfig struct {
 	// MaxConcurrentSessions limits the number of workflow sessions the
-	// preprocessing worker can handle simultaneously (default: 1).
+	// custom worker can handle simultaneously (default: 1).
 	MaxConcurrentSessions int
 }
 
@@ -65,10 +64,10 @@ func (c Configuration) Validate() error {
 		errs = errors.Join(errs, errRequired("SharedPath"))
 	}
 	if c.Temporal.TaskQueue == "" {
-		errs = errors.Join(errs, errRequired("TaskQueue"))
+		errs = errors.Join(errs, errRequired("Temporal.TaskQueue"))
 	}
 	if c.Temporal.WorkflowName == "" {
-		errs = errors.Join(errs, errRequired("WorkflowName"))
+		errs = errors.Join(errs, errRequired("Temporal.WorkflowName"))
 	}
 
 	// Verify that MaxConcurrentSessions is >= 1.
@@ -77,6 +76,10 @@ func (c Configuration) Validate() error {
 			"Worker.MaxConcurrentSessions: %d is less than the minimum value (1)",
 			c.Worker.MaxConcurrentSessions,
 		))
+	}
+
+	if err := c.Bagit.Validate(); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("Bagit.%v", err))
 	}
 
 	return errs
@@ -88,8 +91,8 @@ func Read(config *Configuration, configFile string) (found bool, configFileUsed 
 	v.AddConfigPath(".")
 	v.AddConfigPath("$HOME/.config/")
 	v.AddConfigPath("/etc")
-	v.SetConfigName("preprocessing")
-	v.SetEnvPrefix("ENDURO_PREPROCESSING")
+	v.SetConfigName("moma-enduro")
+	v.SetEnvPrefix("MOMA_ENDURO")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
@@ -122,10 +125,7 @@ func Read(config *Configuration, configFile string) (found bool, configFileUsed 
 	}
 
 	if err := config.Validate(); err != nil {
-		return true, "", errors.Join(
-			fmt.Errorf("invalid configuration:"),
-			err,
-		)
+		return true, "", errors.Join(errors.New("invalid configuration"), err)
 	}
 
 	return true, v.ConfigFileUsed(), nil

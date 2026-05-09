@@ -9,7 +9,7 @@ COPY --link go.* ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY --link . .
 
-FROM build-go AS build-preprocessing-worker
+FROM build-go AS build-moma-enduro-worker
 ARG VERSION_PATH
 ARG VERSION_LONG
 ARG VERSION_SHORT
@@ -19,17 +19,17 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	go build \
 	-trimpath \
 	-ldflags="-X '${VERSION_PATH}.Long=${VERSION_LONG}' -X '${VERSION_PATH}.Short=${VERSION_SHORT}' -X '${VERSION_PATH}.GitCommit=${VERSION_GIT_HASH}'" \
-	-o /out/preprocessing-worker \
+	-o /out/moma-enduro-worker \
 	./cmd/worker
 
 FROM alpine:3.18.2 AS base
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-RUN addgroup -g ${GROUP_ID} -S preprocessing
-RUN adduser -u ${USER_ID} -S -D preprocessing preprocessing
-USER preprocessing
-RUN mkdir /home/preprocessing/shared
+RUN addgroup -g ${GROUP_ID} -S enduro
+RUN adduser -u ${USER_ID} -S -D enduro enduro
+USER enduro
+RUN mkdir /home/enduro/shared
 
-FROM base AS preprocessing-worker
-COPY --from=build-preprocessing-worker --link /out/preprocessing-worker /home/preprocessing/bin/preprocessing-worker
-CMD ["/home/preprocessing/bin/preprocessing-worker"]
+FROM base AS moma-enduro-worker
+COPY --from=build-moma-enduro-worker --link /out/moma-enduro-worker /home/enduro/bin/moma-enduro-worker
+CMD ["/home/enduro/bin/moma-enduro-worker"]

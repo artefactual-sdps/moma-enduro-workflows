@@ -11,15 +11,15 @@ import (
 	"github.com/spf13/pflag"
 	"go.artefactual.dev/tools/log"
 
-	"github.com/artefactual-sdps/preprocessing-moma/cmd/worker/workercmd"
-	"github.com/artefactual-sdps/preprocessing-moma/internal/config"
-	"github.com/artefactual-sdps/preprocessing-moma/internal/version"
+	"github.com/artefactual-sdps/moma-enduro-workflows/cmd/worker/workercmd"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/version"
 )
 
-const appName = "preprocessing-moma-worker"
+const appName = "moma-enduro-worker"
 
 func main() {
-	p := pflag.NewFlagSet(workercmd.Name, pflag.ExitOnError)
+	p := pflag.NewFlagSet(appName, pflag.ExitOnError)
 	p.String("config", "", "Configuration file")
 	p.Bool("version", false, "Show version information")
 	if err := p.Parse(os.Args[1:]); err == flag.ErrHelp {
@@ -43,13 +43,13 @@ func main() {
 	}
 
 	logger := log.New(os.Stderr,
-		log.WithName(workercmd.Name),
+		log.WithName(appName),
 		log.WithDebug(cfg.Debug),
 		log.WithLevel(cfg.Verbosity),
 	)
 	defer log.Sync(logger)
 
-	keys := []interface{}{
+	keys := []any{
 		"version", version.Long,
 		"pid", os.Getpid(),
 		"go", runtime.Version(),
@@ -66,6 +66,7 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() { <-c; cancel() }()

@@ -7,7 +7,7 @@
 
 set -eu
 
-MODULE_PATH="${MODULE_PATH:-github.com/artefactual-sdps/preprocessing-moma}"
+MODULE_PATH="${MODULE_PATH:-github.com/artefactual-sdps/moma-enduro-workflows}"
 
 IFS=".$IFS" read -r major minor patch < internal/version/VERSION.txt
 version_path=${MODULE_PATH}/internal/version

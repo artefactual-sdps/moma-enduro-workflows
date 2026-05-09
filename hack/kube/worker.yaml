@@ -1,36 +1,36 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: preprocessing-worker
+  name: moma-enduro-worker
   labels:
-    app: preprocessing-worker
+    app: moma-enduro-worker
 spec:
-  serviceName: preprocessing-worker
+  serviceName: moma-enduro-worker
   selector:
     matchLabels:
-      app: preprocessing-worker
+      app: moma-enduro-worker
   template:
     metadata:
       labels:
-        app: preprocessing-worker
+        app: moma-enduro-worker
     spec:
       serviceAccountName: sdps
       securityContext:
         fsGroup: 1000
       containers:
-        - name: preprocessing-worker
-          image: preprocessing-moma-worker:dev
+        - name: moma-enduro-worker
+          image: moma-enduro-worker:dev
           volumeMounts:
             - name: config
-              mountPath: /home/preprocessing/.config
+              mountPath: /home/enduro/.config
               readOnly: true
             - name: shared-dir
-              mountPath: /home/preprocessing/shared
+              mountPath: /home/enduro/shared
           resources: {}
       volumes:
         - name: config
           secret:
-            secretName: preprocessing-secret
+            secretName: moma-enduro-secret
         - name: shared-dir
           persistentVolumeClaim:
             claimName: preprocessing-pvc
