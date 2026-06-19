@@ -91,8 +91,8 @@ func Read(config *Configuration, configFile string) (found bool, configFileUsed 
 	v.AddConfigPath(".")
 	v.AddConfigPath("$HOME/.config/")
 	v.AddConfigPath("/etc")
-	v.SetConfigName("moma-enduro")
-	v.SetEnvPrefix("MOMA_ENDURO")
+	v.SetConfigName("moma-enduro-worker")
+	v.SetEnvPrefix("MOMA_ENDURO_WORKER")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 

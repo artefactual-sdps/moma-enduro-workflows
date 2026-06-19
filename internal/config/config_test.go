@@ -41,7 +41,7 @@ func TestConfig(t *testing.T) {
 	for _, tc := range []test{
 		{
 			name:       "Loads configuration from a TOML file",
-			configFile: "moma-enduro.toml",
+			configFile: "moma-enduro-worker.toml",
 			toml:       testConfig,
 			wantFound:  true,
 			wantCfg: config.Configuration{
@@ -64,7 +64,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			name:       "Errors when configuration values are not valid",
-			configFile: "moma-enduro.toml",
+			configFile: "moma-enduro-worker.toml",
 			wantFound:  true,
 			wantErr: `invalid configuration
 SharedPath: missing required value
@@ -73,7 +73,7 @@ Temporal.WorkflowName: missing required value`,
 		},
 		{
 			name:       "Errors when MaxConcurrentSessions is less than 1",
-			configFile: "moma-enduro.toml",
+			configFile: "moma-enduro-worker.toml",
 			toml: `# Config
 sharedPath = "/home/enduro/shared"
 [temporal]
@@ -88,7 +88,7 @@ Worker.MaxConcurrentSessions: -1 is less than the minimum value (1)`,
 		},
 		{
 			name:       "Errors when bagit checksumAlgorithm is invalid",
-			configFile: "moma-enduro.toml",
+			configFile: "moma-enduro-worker.toml",
 			toml: `# Config
 sharedPath = "/home/enduro/shared"
 [temporal]
@@ -103,7 +103,7 @@ Bagit.ChecksumAlgorithm: invalid value "unknown", must be one of (md5, sha1, sha
 		},
 		{
 			name:       "Errors when TOML is invalid",
-			configFile: "moma-enduro.toml",
+			configFile: "moma-enduro-worker.toml",
 			toml:       "bad TOML",
 			wantFound:  true,
 			wantErr:    "failed to read configuration file: While parsing config: toml: expected character =",
@@ -111,7 +111,7 @@ Bagit.ChecksumAlgorithm: invalid value "unknown", must be one of (md5, sha1, sha
 		{
 			name:            "Errors when no config file is found in the default paths",
 			wantFound:       false,
-			wantErrContains: "Config File \"moma-enduro\" Not Found in \"[",
+			wantErrContains: "Config File \"moma-enduro-worker\" Not Found in \"[",
 		},
 		{
 			name:            "Errors when the given configFile is not found",
@@ -123,7 +123,7 @@ Bagit.ChecksumAlgorithm: invalid value "unknown", must be one of (md5, sha1, sha
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tmpDir := fs.NewDir(t, "moma-enduro-test", fs.WithFile("moma-enduro.toml", tc.toml))
+			tmpDir := fs.NewDir(t, "moma-enduro-worker-test", fs.WithFile("moma-enduro-worker.toml", tc.toml))
 
 			configFile := ""
 			if tc.configFile != "" {
@@ -139,7 +139,7 @@ Bagit.ChecksumAlgorithm: invalid value "unknown", must be one of (md5, sha1, sha
 			}
 			if tc.wantErrContains != "" {
 				assert.Equal(t, found, tc.wantFound)
-				assert.ErrorContains(t, err, tc.wantErr)
+				assert.ErrorContains(t, err, tc.wantErrContains)
 				return
 			}
 
