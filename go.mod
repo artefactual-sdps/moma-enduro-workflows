@@ -1,6 +1,6 @@
 module github.com/artefactual-sdps/moma-enduro-workflows
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/artefactual-sdps/enduro v0.29.0
