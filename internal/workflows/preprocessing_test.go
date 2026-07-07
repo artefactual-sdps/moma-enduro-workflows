@@ -1,4 +1,4 @@
-package workflow_test
+package workflows_test
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	temporalsdk_worker "go.temporal.io/sdk/worker"
 
 	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
-	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflow"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflows"
 )
 
 const sharedPath = "/shared/path/"
@@ -25,7 +25,7 @@ type PreprocessingTestSuite struct {
 	temporalsdk_testsuite.WorkflowTestSuite
 
 	env      *temporalsdk_testsuite.TestWorkflowEnvironment
-	workflow *workflow.PreprocessingWorkflow
+	workflow *workflows.PreprocessingWorkflow
 }
 
 func (s *PreprocessingTestSuite) SetupTest(cfg config.Configuration) {
@@ -44,7 +44,7 @@ func (s *PreprocessingTestSuite) SetupTest(cfg config.Configuration) {
 	)
 
 	cfg.Preprocessing.SharedPath = sharedPath
-	s.workflow = workflow.NewPreprocessingWorkflow(cfg.Preprocessing)
+	s.workflow = workflows.NewPreprocessingWorkflow(cfg.Preprocessing)
 }
 
 func (s *PreprocessingTestSuite) AfterTest(suiteName, testName string) {

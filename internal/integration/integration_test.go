@@ -22,7 +22,7 @@ import (
 
 	"github.com/artefactual-sdps/moma-enduro-workflows/cmd/worker/workercmd"
 	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
-	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflow"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflows"
 )
 
 const (
@@ -197,7 +197,7 @@ func TestIntegration(t *testing.T) {
 				TaskQueue:                env.cfg.Worker.TaskQueue,
 				WorkflowExecutionTimeout: 30 * time.Second,
 			},
-			workflow.NewPreprocessingWorkflow(env.cfg.Preprocessing).Execute,
+			workflows.NewPreprocessingWorkflow(env.cfg.Preprocessing).Execute,
 			&childwf.PreprocessingParams{
 				RelativePath: testTransfer,
 			},

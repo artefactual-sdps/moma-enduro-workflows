@@ -14,7 +14,7 @@ import (
 	temporalsdk_workflow "go.temporal.io/sdk/workflow"
 
 	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
-	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflow"
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/workflows"
 )
 
 type Main struct {
@@ -53,7 +53,7 @@ func (m *Main) Run(ctx context.Context) error {
 	m.temporalWorker = w
 
 	w.RegisterWorkflowWithOptions(
-		workflow.NewPreprocessingWorkflow(m.cfg.Preprocessing).Execute,
+		workflows.NewPreprocessingWorkflow(m.cfg.Preprocessing).Execute,
 		temporalsdk_workflow.RegisterOptions{Name: m.cfg.Preprocessing.WorkflowName},
 	)
 
