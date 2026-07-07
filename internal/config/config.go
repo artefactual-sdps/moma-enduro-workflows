@@ -23,63 +23,101 @@ type Configuration struct {
 	// number of messages logged.
 	Verbosity int
 
-	// SharedPath is a directory path that both the custom worker and the Enduro
-	// workers can access. This is required for preprocessing workers to share
-	// the SIP.
-	SharedPath string
+	// Temporal configures the Temporal client.
+	Temporal TemporalConfig
 
-	Temporal Temporal
-	Worker   WorkerConfig
-	Bagit    bagcreate.Config
+	// Worker configures the Temporal worker.
+	Worker WorkerConfig
+
+	// Preprocessing configures the preprocessing workflow.
+	Preprocessing PreprocessingConfig
 }
 
-type Temporal struct {
-	// Address is the Temporal server host and port (default: "localhost:7233").
+type TemporalConfig struct {
+	// Address is the Temporal server host and port (required).
 	Address string
 
 	// Namespace is the Temporal namespace the preprocessing worker should run
 	// in (default: "default").
 	Namespace string
-
-	// TaskQueue is the Temporal task queue from which the preprocessing worker
-	// will pull tasks (required).
-	TaskQueue string
-
-	// WorkflowName is the name of the preprocessing Temporal workflow
-	// (required).
-	WorkflowName string
 }
 
 type WorkerConfig struct {
 	// MaxConcurrentSessions limits the number of workflow sessions the
 	// custom worker can handle simultaneously (default: 1).
 	MaxConcurrentSessions int
+
+	// TaskQueue is the Temporal task queue from which the preprocessing worker
+	// will pull tasks (required).
+	TaskQueue string
+}
+
+type PreprocessingConfig struct {
+	// WorkflowName is the name of the preprocessing Temporal workflow
+	// (required).
+	WorkflowName string
+
+	// SharedPath is a directory path that both the custom worker and the Enduro
+	// workers can access. This is required for preprocessing workers to share
+	// the SIP.
+	SharedPath string
+
+	// BagCreate configures the bagcreate activity used in the preprocessing
+	// workflow.
+	BagCreate bagcreate.Config
 }
 
 func (c Configuration) Validate() error {
+	return errors.Join(
+		c.Temporal.Validate(),
+		c.Worker.Validate(),
+		c.Preprocessing.Validate(),
+	)
+}
+
+func (c TemporalConfig) Validate() error {
 	var errs error
 
-	// Verify that the required fields have values.
-	if c.SharedPath == "" {
-		errs = errors.Join(errs, errRequired("SharedPath"))
+	if c.Address == "" {
+		errs = errors.Join(errs, errRequired("Temporal.Address"))
 	}
-	if c.Temporal.TaskQueue == "" {
-		errs = errors.Join(errs, errRequired("Temporal.TaskQueue"))
+	if c.Namespace == "" {
+		errs = errors.Join(errs, errRequired("Temporal.Namespace"))
 	}
-	if c.Temporal.WorkflowName == "" {
-		errs = errors.Join(errs, errRequired("Temporal.WorkflowName"))
+
+	return errs
+}
+
+func (c WorkerConfig) Validate() error {
+	var errs error
+
+	if c.TaskQueue == "" {
+		errs = errors.Join(errs, errRequired("Worker.TaskQueue"))
 	}
 
 	// Verify that MaxConcurrentSessions is >= 1.
-	if c.Worker.MaxConcurrentSessions < 1 {
+	if c.MaxConcurrentSessions < 1 {
 		errs = errors.Join(errs, fmt.Errorf(
 			"Worker.MaxConcurrentSessions: %d is less than the minimum value (1)",
-			c.Worker.MaxConcurrentSessions,
+			c.MaxConcurrentSessions,
 		))
 	}
 
-	if err := c.Bagit.Validate(); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("Bagit.%v", err))
+	return errs
+}
+
+func (c PreprocessingConfig) Validate() error {
+	var errs error
+
+	if c.SharedPath == "" {
+		errs = errors.Join(errs, errRequired("Preprocessing.SharedPath"))
+	}
+	if c.WorkflowName == "" {
+		errs = errors.Join(errs, errRequired("Preprocessing.WorkflowName"))
+	}
+
+	if err := c.BagCreate.Validate(); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("Preprocessing.BagCreate: %v", err))
 	}
 
 	return errs
@@ -97,7 +135,9 @@ func Read(config *Configuration, configFile string) (found bool, configFileUsed 
 	v.AutomaticEnv()
 
 	// Defaults.
+	v.SetDefault("Temporal.Namespace", "default")
 	v.SetDefault("Worker.MaxConcurrentSessions", 1)
+	v.SetDefault("Preprocessing.BagCreate.ChecksumAlgorithm", "sha512")
 
 	if configFile != "" {
 		// Viper will not return a viper.ConfigFileNotFoundError error when

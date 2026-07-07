@@ -43,7 +43,7 @@ func (m *Main) Run(ctx context.Context) error {
 	}
 	m.temporalClient = c
 
-	w := temporalsdk_worker.New(m.temporalClient, m.cfg.Temporal.TaskQueue, temporalsdk_worker.Options{
+	w := temporalsdk_worker.New(m.temporalClient, m.cfg.Worker.TaskQueue, temporalsdk_worker.Options{
 		EnableSessionWorker:               true,
 		MaxConcurrentSessionExecutionSize: m.cfg.Worker.MaxConcurrentSessions,
 		Interceptors: []temporalsdk_interceptor.WorkerInterceptor{
@@ -53,8 +53,8 @@ func (m *Main) Run(ctx context.Context) error {
 	m.temporalWorker = w
 
 	w.RegisterWorkflowWithOptions(
-		workflow.NewPreprocessingWorkflow(m.cfg.SharedPath).Execute,
-		temporalsdk_workflow.RegisterOptions{Name: m.cfg.Temporal.WorkflowName},
+		workflow.NewPreprocessingWorkflow(m.cfg.Preprocessing).Execute,
+		temporalsdk_workflow.RegisterOptions{Name: m.cfg.Preprocessing.WorkflowName},
 	)
 
 	w.RegisterActivityWithOptions(
@@ -63,7 +63,7 @@ func (m *Main) Run(ctx context.Context) error {
 	)
 
 	w.RegisterActivityWithOptions(
-		bagcreate.New(m.cfg.Bagit).Execute,
+		bagcreate.New(m.cfg.Preprocessing.BagCreate).Execute,
 		temporalsdk_activity.RegisterOptions{Name: bagcreate.Name},
 	)
 

@@ -39,11 +39,12 @@ func (s *PreprocessingTestSuite) SetupTest(cfg config.Configuration) {
 	)
 
 	s.env.RegisterActivityWithOptions(
-		bagcreate.New(cfg.Bagit).Execute,
+		bagcreate.New(cfg.Preprocessing.BagCreate).Execute,
 		temporalsdk_activity.RegisterOptions{Name: bagcreate.Name},
 	)
 
-	s.workflow = workflow.NewPreprocessingWorkflow(sharedPath)
+	cfg.Preprocessing.SharedPath = sharedPath
+	s.workflow = workflow.NewPreprocessingWorkflow(cfg.Preprocessing)
 }
 
 func (s *PreprocessingTestSuite) AfterTest(suiteName, testName string) {

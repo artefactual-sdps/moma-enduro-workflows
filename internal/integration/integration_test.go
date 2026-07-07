@@ -68,10 +68,12 @@ func defaultConfig() config.Configuration {
 		Debug:     true,
 		Worker: config.WorkerConfig{
 			MaxConcurrentSessions: 1,
+			TaskQueue:             "preprocessing",
 		},
-		Temporal: config.Temporal{
-			Namespace:    "default",
-			TaskQueue:    "preprocessing",
+		Temporal: config.TemporalConfig{
+			Namespace: "default",
+		},
+		Preprocessing: config.PreprocessingConfig{
 			WorkflowName: "preprocessing",
 		},
 	}
@@ -106,7 +108,7 @@ func (env *testEnv) createTestDir() {
 	env.t.Helper()
 
 	env.testDir = tfs.NewDir(env.t, "moma-enduro-test")
-	env.cfg.SharedPath = env.testDir.Path()
+	env.cfg.Preprocessing.SharedPath = env.testDir.Path()
 }
 
 func (env *testEnv) startWorker(ctx context.Context) {
@@ -192,10 +194,10 @@ func TestIntegration(t *testing.T) {
 		run, err := temporalServer.client.ExecuteWorkflow(
 			ctx,
 			temporalsdk_client.StartWorkflowOptions{
-				TaskQueue:                env.cfg.Temporal.TaskQueue,
+				TaskQueue:                env.cfg.Worker.TaskQueue,
 				WorkflowExecutionTimeout: 30 * time.Second,
 			},
-			workflow.NewPreprocessingWorkflow(env.testDir.Path()).Execute,
+			workflow.NewPreprocessingWorkflow(env.cfg.Preprocessing).Execute,
 			&childwf.PreprocessingParams{
 				RelativePath: testTransfer,
 			},

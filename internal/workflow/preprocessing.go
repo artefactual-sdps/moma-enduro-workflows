@@ -11,14 +11,16 @@ import (
 	"go.artefactual.dev/tools/temporal"
 	temporalsdk_temporal "go.temporal.io/sdk/temporal"
 	temporalsdk_workflow "go.temporal.io/sdk/workflow"
+
+	"github.com/artefactual-sdps/moma-enduro-workflows/internal/config"
 )
 
 type PreprocessingWorkflow struct {
-	sharedPath string
+	cfg config.PreprocessingConfig
 }
 
-func NewPreprocessingWorkflow(sharedPath string) *PreprocessingWorkflow {
-	return &PreprocessingWorkflow{sharedPath: sharedPath}
+func NewPreprocessingWorkflow(cfg config.PreprocessingConfig) *PreprocessingWorkflow {
+	return &PreprocessingWorkflow{cfg: cfg}
 }
 
 func (w *PreprocessingWorkflow) Execute(
@@ -34,13 +36,13 @@ func (w *PreprocessingWorkflow) Execute(
 	}
 	result.RelativePath = params.RelativePath
 
-	localPath := filepath.Join(w.sharedPath, filepath.Clean(params.RelativePath))
+	localPath := filepath.Join(w.cfg.SharedPath, filepath.Clean(params.RelativePath))
 
 	// Remove unwanted files.
 	task := result.NewTask(temporalsdk_workflow.Now(ctx), "Remove unwanted files")
 	var removeFilesResult removefiles.Result
 	err := temporalsdk_workflow.ExecuteActivity(
-		withLocalActOpts(ctx),
+		withFilesystemActivityOpts(ctx),
 		removefiles.Name,
 		&removefiles.Params{
 			Path:        localPath,
@@ -62,10 +64,10 @@ func (w *PreprocessingWorkflow) Execute(
 	task = result.NewTask(temporalsdk_workflow.Now(ctx), "Bag SIP")
 	var createBag bagcreate.Result
 	err = temporalsdk_workflow.ExecuteActivity(
-		withLocalActOpts(ctx),
+		withFilesystemActivityOpts(ctx),
 		bagcreate.Name,
 		&bagcreate.Params{
-			SourcePath: filepath.Join(w.sharedPath, params.RelativePath),
+			SourcePath: localPath,
 		},
 	).Get(ctx, &createBag)
 	if err != nil {
@@ -78,14 +80,11 @@ func (w *PreprocessingWorkflow) Execute(
 	return result, nil
 }
 
-func withLocalActOpts(ctx temporalsdk_workflow.Context) temporalsdk_workflow.Context {
-	return temporalsdk_workflow.WithActivityOptions(
-		ctx,
-		temporalsdk_workflow.ActivityOptions{
-			ScheduleToCloseTimeout: 5 * time.Minute,
-			RetryPolicy: &temporalsdk_temporal.RetryPolicy{
-				MaximumAttempts: 1,
-			},
+func withFilesystemActivityOpts(ctx temporalsdk_workflow.Context) temporalsdk_workflow.Context {
+	return temporalsdk_workflow.WithActivityOptions(ctx, temporalsdk_workflow.ActivityOptions{
+		StartToCloseTimeout: time.Hour * 2,
+		RetryPolicy: &temporalsdk_temporal.RetryPolicy{
+			MaximumAttempts: 1,
 		},
-	)
+	})
 }

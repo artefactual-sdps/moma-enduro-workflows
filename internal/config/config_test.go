@@ -13,15 +13,16 @@ import (
 const testConfig = `# Config
 debug = true
 verbosity = 2
-sharedPath = "/home/enduro/shared"
 [temporal]
 address = "host:port"
 namespace = "default"
-taskQueue = "preprocessing"
-workflowName = "preprocessing"
 [worker]
 maxConcurrentSessions = 1
-[bagit]
+taskQueue = "moma-enduro"
+[preprocessing]
+workflowName = "preprocessing"
+sharedPath = "/home/enduro/shared"
+[preprocessing.bagCreate]
 checksumAlgorithm = "md5"
 `
 
@@ -45,20 +46,22 @@ func TestConfig(t *testing.T) {
 			toml:       testConfig,
 			wantFound:  true,
 			wantCfg: config.Configuration{
-				Debug:      true,
-				Verbosity:  2,
-				SharedPath: "/home/enduro/shared",
-				Temporal: config.Temporal{
-					Address:      "host:port",
-					Namespace:    "default",
-					TaskQueue:    "preprocessing",
-					WorkflowName: "preprocessing",
+				Debug:     true,
+				Verbosity: 2,
+				Temporal: config.TemporalConfig{
+					Address:   "host:port",
+					Namespace: "default",
 				},
 				Worker: config.WorkerConfig{
 					MaxConcurrentSessions: 1,
+					TaskQueue:             "moma-enduro",
 				},
-				Bagit: bagcreate.Config{
-					ChecksumAlgorithm: "md5",
+				Preprocessing: config.PreprocessingConfig{
+					WorkflowName: "preprocessing",
+					SharedPath:   "/home/enduro/shared",
+					BagCreate: bagcreate.Config{
+						ChecksumAlgorithm: "md5",
+					},
 				},
 			},
 		},
@@ -67,39 +70,45 @@ func TestConfig(t *testing.T) {
 			configFile: "moma-enduro-worker.toml",
 			wantFound:  true,
 			wantErr: `invalid configuration
-SharedPath: missing required value
-Temporal.TaskQueue: missing required value
-Temporal.WorkflowName: missing required value`,
+Temporal.Address: missing required value
+Worker.TaskQueue: missing required value
+Preprocessing.SharedPath: missing required value
+Preprocessing.WorkflowName: missing required value`,
 		},
 		{
 			name:       "Errors when MaxConcurrentSessions is less than 1",
 			configFile: "moma-enduro-worker.toml",
 			toml: `# Config
-sharedPath = "/home/enduro/shared"
 [temporal]
-taskQueue = "preprocessing"
-workflowName = "preprocessing"
+address = "host:port"
 [worker]
 maxConcurrentSessions = -1
+taskQueue = "moma-enduro"
+[preprocessing]
+workflowName = "preprocessing"
+sharedPath = "/home/enduro/shared"
 `,
 			wantFound: true,
 			wantErr: `invalid configuration
 Worker.MaxConcurrentSessions: -1 is less than the minimum value (1)`,
 		},
 		{
-			name:       "Errors when bagit checksumAlgorithm is invalid",
+			name:       "Errors when bagcreate checksumAlgorithm is invalid",
 			configFile: "moma-enduro-worker.toml",
 			toml: `# Config
-sharedPath = "/home/enduro/shared"
 [temporal]
-taskQueue = "preprocessing"
+address = "host:port"
+[worker]
+taskQueue = "moma-enduro"
+[preprocessing]
 workflowName = "preprocessing"
-[bagit]
+sharedPath = "/home/enduro/shared"
+[preprocessing.bagCreate]
 checksumAlgorithm = "unknown"
 `,
 			wantFound: true,
 			wantErr: `invalid configuration
-Bagit.ChecksumAlgorithm: invalid value "unknown", must be one of (md5, sha1, sha256, sha512)`,
+Preprocessing.BagCreate: ChecksumAlgorithm: invalid value "unknown", must be one of (md5, sha1, sha256, sha512)`,
 		},
 		{
 			name:       "Errors when TOML is invalid",

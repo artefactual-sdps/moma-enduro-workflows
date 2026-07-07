@@ -10,27 +10,25 @@ and repackaging the cleaned SIP as a BagIt bag.
 
 ## Configuration
 
-The required configuration for the default `moma-enduro-worker`:
+Example configuration for the default `moma-enduro-worker`:
 
 ```toml
 debug = false
 verbosity = 0
-sharedPath = "/home/enduro/shared"
 
 [temporal]
 address = "temporal-frontend.enduro-sdps:7233"
 namespace = "default"
-taskQueue = "preprocessing"
-workflowName = "preprocessing"
 
 [worker]
+taskQueue = "moma-enduro"
 maxConcurrentSessions = 1
-```
 
-Optional BagIt bag configuration:
+[preprocessing]
+workflowName = "preprocessing"
+sharedPath = "/home/enduro/shared"
 
-```toml
-[bagit]
+[preprocessing.bagCreate]
 checksumAlgorithm = "sha512"
 ```
 
@@ -42,7 +40,7 @@ The child workflow section for Enduro's configuration:
 [[childWorkflows]]
 type = "preprocessing"
 namespace = "default"
-taskQueue = "preprocessing"
+taskQueue = "moma-enduro"
 workflowName = "preprocessing"
 extract = false
 sharedPath = "/home/enduro/preprocessing"
