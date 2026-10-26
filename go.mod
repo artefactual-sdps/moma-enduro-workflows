@@ -2,6 +2,8 @@ module github.com/artefactual-sdps/moma-enduro-workflows
 
 go 1.26.4
 
+toolchain go1.26.10
+
 require (
 	github.com/artefactual-sdps/enduro v0.29.0
 	github.com/artefactual-sdps/temporal-activities v0.0.0-20260406175419-303edb7db3db
